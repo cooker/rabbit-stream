@@ -1,0 +1,41 @@
+delay:
+  #订单超1小时关闭
+  orderTimeout:
+    topic: delay_hour_topic
+    group: hour
+spring:
+  cloud:
+    stream:
+      bindings:
+        orderTimeout:
+          destination: delay_hour_topic
+          group: hour
+          content-type: application/json
+          producer:
+            required-groups:
+              - hour
+        orderTimeout_dlq_in:
+          destination: delay_hour_topic.hour
+          group: dlq
+          consumer:
+            prefetch: 1
+            bind-queue: false
+        order_close_out:
+          destination: timeout_topic
+          content-type: application/json
+          producer:
+            required-groups:
+              - close
+        order_close_in:
+          consumer:
+            concurrency: 3
+            max-attempts: 3
+          content-type: application/json
+          destination: order_timeout_close_topic
+          group: close
+      rabbit:
+        bindings:
+          orderTimeout:
+            producer:
+              ttl: 10000
+              auto-bind-dlq: true
